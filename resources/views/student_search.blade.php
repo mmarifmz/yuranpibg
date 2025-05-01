@@ -69,9 +69,7 @@
                             @endforeach
                             @if($anyPending)
                                 <div class="mt-3">
-                                    <a href="{{ route('review.payment', $familyId) }}" class="btn btn-success w-100">
-                                        Bayar Sekarang
-                                    </a>
+                                    <a href="{{ route('review.payment', ['familyId' => $familyId]) }}" class="btn btn-success w-100">Bayar Sekarang</a>
                                 </div>
                             @endif
                         </div>
