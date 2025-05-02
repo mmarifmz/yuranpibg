@@ -1,0 +1,43 @@
+# Laravel core
+/vendor
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/.env
+/.env.*.php
+/.phpunit.result.cache
+/.idea
+/.vscode
+Homestead.json
+Homestead.yaml
+
+# Composer & NPM
+composer.lock
+package-lock.json
+yarn.lock
+
+# Cache, logs, debug
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/debugbar
+
+# Laravel specific
+.env
+.env.*
+.env.backup
+.env.local
+.env.development
+.env.production
+.env.testing
+
+# Misc
+.DS_Store
+Thumbs.db
+npm-debug.log
+yarn-error.log
+
+# Laravel Sail
+docker-compose.override.yml
