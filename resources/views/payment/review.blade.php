@@ -39,6 +39,15 @@
 
     <form action="{{ route('confirm.payment', ['familyId' => $familyId]) }}" method="POST" id="paymentForm">
         @csrf
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         <div class="bg-light p-4 rounded border mb-4">
             <h5>🧾 <strong>Itemized Bill</strong></h5>
             <div class="form-check my-2">
@@ -55,7 +64,8 @@
             </div>
             <div class="input-group">
                 <span class="input-group-text">RM</span>
-                <input type="number" name="ikhlas_amount" id="ikhlas_amount" class="form-control" value="0" oninput="updateTotal()">
+                <input type="number" name="donation_amount" id="donation_amount" class="form-control" value="0" oninput="updateTotal()">
+                <input type="hidden" name="total_amount" id="total_amount" value="100">
             </div>
         </div>
 
@@ -70,23 +80,30 @@
         </div>
 
         <h5 class="mb-3">💰 Jumlah Bayaran: <strong>RM <span id="totalAmount">100</span>.00</strong></h5>
-        <input type="hidden" name="amount" id="totalAmountInput" value="100">
         <button type="submit" class="btn btn-success w-100">✅ Sahkan & Bayar</button>
     </form>
 </div>
+@endsection
 
+@section('scripts')
 <script>
+
+    const baseFee = 100;
+    const donationInput = document.getElementById('donation_amount');
+    const totalDisplay = document.getElementById('totalAmount');
+    
     function setIkhlas(amount) {
-        document.getElementById('ikhlas_amount').value = amount;
+        donationInput.value = amount;
         updateTotal();
     }
 
     function updateTotal() {
-        const base = 100;
-        const ikhlas = parseFloat(document.getElementById('ikhlas_amount').value || 0);
-        const total = base + (isNaN(ikhlas) ? 0 : ikhlas);
-        document.getElementById('totalAmount').innerText = total;
-        document.getElementById('totalAmountInput').value = total;
+        const donation = parseFloat(donationInput.value || 0);
+        const total = baseFee + donation;
+        totalDisplay.innerText = total;
+        document.getElementById('total_amount').value = total;
     }
+
+    donationInput.addEventListener('input', updateTotal);
 </script>
 @endsection

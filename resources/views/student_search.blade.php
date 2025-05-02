@@ -79,7 +79,7 @@
         </div>
 
         <div class="text-center mt-4">
-            <button id="loadMore" class="btn btn-outline-secondary">Muat Lagi</button>
+            <button id="loadMore" class="btn btn-outline-secondary">Display More..</button>
         </div>
     @elseif(isset($searched))
         <div class="alert alert-warning text-center mt-4">Tiada pelajar dijumpai.</div>

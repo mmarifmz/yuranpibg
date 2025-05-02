@@ -12,51 +12,58 @@ class PaymentWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        $data = $request->all();
+        $payload = $request->all();
 
-        // Step 1: Validate signature
-        $receivedSignature = $data['signature'] ?? null;
-        $secretKey = env('TOYYIBPAY_SECRET_KEY');
-        $generatedSignature = sha1(
-            $data['refno'] . '|' .
-            $data['billcode'] . '|' .
-            $data['amount'] . '|' .
-            $secretKey
-        );
+        Log::debug('ToyyibPay Webhook received', $payload);
 
-        if ($receivedSignature !== $generatedSignature) {
-            Log::warning('Invalid ToyyibPay signature received', $data);
-            return response()->json(['message' => 'Invalid signature'], 403);
+        // Validate required fields
+        if (!isset($payload['billCode'], $payload['billpaymentStatus'], $payload['billpaymentAmount'], $payload['billpaymentInvoice'])) {
+            Log::warning('Invalid webhook payload', $payload);
+            return response()->json(['error' => 'Invalid payload'], 400);
         }
 
-        // Step 2: Status mapping
-        $statusCode = $data['status'] ?? null;
-        $statusText = match ($statusCode) {
+        $transactionId = $payload['billpaymentInvoice'];
+        $amount = $payload['billpaymentAmount'] / 100; // convert from cents to RM
+        $statusCode = $payload['billpaymentStatus'];
+        $familyId = $payload['billExternalReferenceNo'];
+
+        $statusMap = [
             1 => 'Success',
             2 => 'Failed',
             3 => 'Pending',
-            default => 'Unknown',
-        };
+        ];
 
-        // Step 3: Log the raw payload
+        $status = $statusMap[$statusCode] ?? 'Unknown';
+
+        // Save webhook log
         WebhookLog::create([
-            'family_id' => $data['billExternalReference'] ?? null,
-            'transaction_id' => $data['refno'] ?? null,
-            'status' => $statusText,
-            'amount' => $data['amount'] ?? 0,
-            'raw_payload' => json_encode($data),
+            'family_id'      => $familyId,
+            'transaction_id' => $transactionId,
+            'status'         => $status,
+            'amount'         => $amount,
+            'raw_payload'    => json_encode($payload),
         ]);
 
-        // Step 4: Update payment status in families
-        if (!empty($data['billExternalReference'])) {
-            Family::where('family_id', $data['billExternalReference'])
-                ->update([
-                    'payment_status' => $statusText,
-                ]);
+        // Update family payment info if successful
+        if (strtolower($status) === 'success') {
+            Family::where('family_id', $familyId)->update([
+                'payment_status'     => 'paid',
+                'amount_paid'        => $amount,
+                'payment_reference'  => $transactionId,
+                'paid_at'            => now(),
+            ]);
+
+            Log::info("Payment updated for family $familyId", [
+                'transaction_id' => $transactionId,
+                'amount' => $amount,
+            ]);
         } else {
-            Log::error('Missing family_id in webhook payload', $data);
+            Log::notice("Payment not successful for family $familyId", [
+                'status' => $status,
+                'payload' => $payload,
+            ]);
         }
 
-        return response()->json(['message' => 'Webhook processed'], 200);
+        return response()->json(['message' => 'OK'], 200);
     }
 }
