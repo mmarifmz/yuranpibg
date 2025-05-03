@@ -85,11 +85,14 @@ class PaymentController extends Controller
         } else {
             $billAmount = 100 + ($request->donation_amount ?? 0);
         }
-
+	
+	$secretKey = config('services.toyyibpay.secret_key');
+	$categoryCode = config('services.toyyibpay.category_code');
+	
         // ToyyibPay params
         $payload = [
-            'userSecretKey' => env('TOYYIBPAY_SECRET_KEY'),
-            'categoryCode' => env('TOYYIBPAY_CATEGORY_CODE'),
+            'userSecretKey' => $secretKey,
+            'categoryCode' => $categoryCode,
             'billName' => 'Sumbangan PIBG 2025 / 2026',
             'billDescription' => $billDescription,
             'billPriceSetting' => 1,

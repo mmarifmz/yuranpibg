@@ -13,7 +13,10 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
-
+    'toyyibpay' => [
+    	'secret_key' => env('TOYYIBPAY_SECRET_KEY'),
+    	'category_code' => env('TOYYIBPAY_CATEGORY_CODE'),
+    ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
