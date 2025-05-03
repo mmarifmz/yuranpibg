@@ -16,10 +16,10 @@ class StudentController extends Controller
 
         // Lazy preview families with at least one pending status
         $families = Family::where('payment_status', 'pending')
-            ->orderBy('family_id')
+            ->inRandomOrder()
             ->get()
             ->groupBy('family_id')
-            ->take(6); // Limit preview to 6 families
+            ->take(9);
 
         return view('student_search', [
             'families' => $families ?? collect(),
@@ -33,32 +33,29 @@ class StudentController extends Controller
 
     public function handleSearch(Request $request)
     {
-        $request->validate([
-            'student_name' => 'required|string|max:255',
-        ]);
+        $studentName = $request->input('student_name');
+        $className = $request->input('class_name');
 
-        $studentName = strtoupper(trim($request->input('student_name')));
-        $classFilter = $request->input('class_name');
+        // Get all students that match the search
+        $matchedStudents = Family::when($className, fn($q) => $q->where('class_name', $className))
+            ->where('student_name', 'like', "%$studentName%")
+            ->get();
 
-        $query = Family::where('student_name', 'LIKE', "%{$studentName}%");
+        // Get unique family IDs from matches
+        $matchedFamilyIds = $matchedStudents->pluck('family_id')->unique();
 
-        if (!empty($classFilter)) {
-            $query->where('class_name', $classFilter);
-        }
-
-        $families = $query->orderBy('family_id')->get()->groupBy('family_id');
-
-        $classNames = Family::select('class_name')
-            ->distinct()
+        // Load full family groups for each matched family_id
+        $families = Family::whereIn('family_id', $matchedFamilyIds)
             ->orderBy('class_name')
-            ->pluck('class_name');
+            ->get()
+            ->groupBy('family_id');
 
         return view('student_search', [
             'families' => $families,
             'searched' => true,
             'student_name' => $studentName,
-            'classNames' => $classNames,
-            'selectedClass' => $classFilter,
+            'classNames' => Family::select('class_name')->distinct()->orderBy('class_name')->pluck('class_name'),
+            'selectedClass' => $className,
         ]);
     }
 
