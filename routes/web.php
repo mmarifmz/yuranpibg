@@ -35,8 +35,10 @@ Route::post('/payment-update', [FamilyController::class, 'updatePayment'])->name
 // ToyyibPay - Redirect return after user pays
 Route::get('/payment-return', [PaymentSuccessController::class, 'handleToyyibPayReturn'])->name('payment.return');
 
-// Final success page after payment
+//  Success / Summary page after payment
 Route::get('/payment-success/{familyId}', [PaymentSuccessController::class, 'show'])->name('payment.success');
+Route::get('/payment-summary/{familyId}', [PaymentSuccessController::class, 'summary'])->name('payment.summary');
+Route::post('/payment-retry/{familyId}', [PaymentWebhookController::class, 'retry'])->name('payment.retry');
 
 // Receipt PDF and public view
 Route::get('/download-receipt/{familyId}', [PaymentSuccessController::class, 'downloadReceipt'])->name('download.receipt');

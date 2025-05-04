@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Family;
 use App\Models\ReviewLog;
+use App\Models\PaymentFlow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -15,16 +16,36 @@ class PaymentController extends Controller
     public function reviewPayment($familyId)
     {
         $students = Family::where('family_id', $familyId)->get();
+        $family = $students->firstOrFail(); // throws 404 if empty
 
-        if ($students->isEmpty()) {
-            abort(404);
+        // Log intent
+        $hasRecentInitiated = PaymentFlow::where('family_id', $familyId)
+            ->where('status', 'initiated')
+            ->where('created_at', '>=', now()->subMinutes(15))
+            ->exists();
+
+        if (! $hasRecentInitiated) {
+            PaymentFlow::create([
+                'family_id' => $familyId,
+                'status' => 'initiated',
+                'initiated_at' => now(),
+                'ip' => request()->ip(),
+                'user_agent' => Str::limit(request()->userAgent(), 255),
+            ]);
         }
 
-        ReviewLog::create([
-            'family_id' => $familyId,
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        $recentLog = ReviewLog::where('family_id', $familyId)
+            ->where('ip', request()->ip())
+            ->where('created_at', '>=', now()->subHour())
+            ->exists();
+
+        if (! $recentLog) {
+            ReviewLog::create([
+                'family_id' => $familyId,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+        }
 
         return view('payment.review', [
             'familyId' => $familyId,
@@ -56,7 +77,8 @@ class PaymentController extends Controller
         $billAmount = 100 + ($request->donation_amount ?? 0);
 
         $billCode = Str::random(10);
-        $callbackUrl = route('payment.return');
+        $returnUrl = route('payment.success', ['familyId' => $familyId]);
+        $callbackUrl = route('payment.webhook'); // 👈 backend webhook for ToyyibPay to confirm payment
 
         if (app()->environment('local')) {
             $billAmount = 1; // Always RM 1 in local
@@ -73,8 +95,8 @@ class PaymentController extends Controller
             'billPriceSetting' => 1,
             'billPayorInfo' => 1,
             'billAmount' => $billAmount * 100, // in cents
-            'billReturnUrl' => $callbackUrl,
-            'billCallbackUrl' => route('payment.webhook'),
+            'billReturnUrl' => $returnUrl,
+            'billCallbackUrl' => $callbackUrl,
             'billExternalReferenceNo' => $familyId,
             'billTo' => $request->input('email'),
             'billEmail' => $request->input('email'),
@@ -83,6 +105,18 @@ class PaymentController extends Controller
             'billPaymentChannel' => 0,
             'billDisplayMerchant' => 1
         ];
+
+        // Track when user gets redirected to ToyyibPay
+        PaymentFlow::where('family_id', $familyId)
+            ->where('status', 'initiated')
+            ->latest()
+            ->first()
+            ?->update([
+                'status' => 'redirected',
+                'redirected_at' => now(),
+                'bill_email' => $request->input('email'),
+                'bill_phone' => $request->input('phone'),
+            ]);
 
         // debug payload
         Log::info('ToyyibPay payload', $payload);

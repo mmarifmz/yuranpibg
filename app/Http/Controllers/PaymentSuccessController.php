@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\DB;
 use App\Models\Family;
 use App\Models\WebhookLog;
+use App\Models\PaymentFlow;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
@@ -17,59 +18,94 @@ class PaymentSuccessController extends Controller
     public function handleToyyibPayReturn(Request $request)
     {
         $transactionId = $request->query('transaction_id');
+        $status        = strtolower($request->query('status'));
+        $familyId      = $request->query('order_id');
+        $billCode      = $request->query('billcode');
 
-        if (!$transactionId) {
-            Log::warning('Missing transaction_id on payment-return', [
-                'ip' => $request->ip(),
-                'agent' => $request->userAgent(),
+        if (!$transactionId || !$status || !$familyId) {
+            Log::warning('Missing transaction_id, status, or family_id in ToyyibPay return', [
+                'ip'     => $request->ip(),
+                'agent'  => $request->userAgent(),
+                'params' => $request->all(),
             ]);
             return Redirect::to('/')->with('error', 'Maklumat transaksi tidak lengkap.');
         }
 
+        // Update payment_flows (use fallback if webhook failed)
+        $flow = PaymentFlow::where('family_id', $familyId)
+            ->whereNull('transaction_id')
+            ->latest()
+            ->first();
+
+        if ($flow) {
+            $flow->update([
+                'transaction_id' => $transactionId,
+                'bill_code'      => $billCode,
+                'status'         => $status === 'success' ? 'paid' : 'cancelled',
+                'paid_at'        => $status === 'success' ? now() : null,
+                'cancelled_at'   => $status !== 'success' ? now() : null,
+            ]);
+        }
+
+        // Try to fetch webhook log
         $log = WebhookLog::where('transaction_id', $transactionId)->latest()->first();
 
         if (!$log) {
-            Log::alert('Unmatched transaction_id return detected', [
+            Log::alert('WebhookLog missing (possibly delayed ToyyibPay callback)', [
                 'transaction_id' => $transactionId,
-            ]);
-            return Redirect::to('/')->with('error', 'Resit tidak dijumpai.');
-        }
-
-        $familyId = $log->family_id;
-        $status = strtolower($log->status);
-
-        if ($status !== 'success') {
-            return Redirect::to('/')->with('error', 'Pembayaran tidak berjaya.');
-        }
-
-        if (!$log) {
-            Log::warning('Skipping log check (dev fallback)', [
-                'transaction_id' => $transactionId,
+                'status'         => $status,
             ]);
 
-            return redirect()->route('payment.success', ['familyId' => 'F050']);
+            // Fallback to summary view for retry or display
+            if ($flow) {
+                return Redirect::route('payment.summary', ['familyId' => $familyId]);
+            }
+
+            return Redirect::to('/')->with('error', 'Transaksi tidak dapat disahkan.');
         }
 
-        return Redirect::route('payment.success', $familyId);
+        // Payment failed even with webhook received
+        if (strtolower($log->status) !== 'success') {
+            return Redirect::route('payment.summary', ['familyId' => $log->family_id]);
+        }
+
+        // ✅ Redirect to payment success
+        return Redirect::route('payment.success', ['familyId' => $log->family_id]);
     }
 
-    // GET /payment-success/{familyId}
+    // redirect to payment.success and redirect to payment.summary if not success
     public function show($familyId)
     {
         $family = Family::where('family_id', $familyId)->firstOrFail();
-        $students = Student::where('family_id', $familyId)->get();
 
-        // get from latest successful webhook
         $webhook = WebhookLog::where('family_id', $familyId)
             ->where('status', 'Success')
             ->latest()
             ->first();
 
+        if (!$webhook) {
+            return redirect()->route('payment.summary', ['familyId' => $familyId]);
+        }
+
         return view('payment.payment_success', [
             'family' => $family,
-            'students' => $students,
             'transactionId' => $webhook->transaction_id ?? '-',
             'amount' => $webhook->amount ?? 0,
+        ]);
+    }
+
+    public function summary($familyId)
+    {
+        $family = Family::where('family_id', $familyId)->firstOrFail();
+
+        $flow = PaymentFlow::where('family_id', $familyId)
+            ->whereNotNull('transaction_id')
+            ->latest()
+            ->first();
+
+        return view('payment.summary', [
+            'family' => $family,
+            'flow' => $flow,
         ]);
     }
 
