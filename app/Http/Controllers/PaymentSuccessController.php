@@ -17,6 +17,7 @@ class PaymentSuccessController extends Controller
     // GET /payment-return (ToyyibPay will redirect users here)
     public function handleToyyibPayReturn(Request $request)
     {
+        Log::info('🎯 ToyyibPay Return Params', $request->all()); // ✅ Add this line
         $transactionId = $request->query('transaction_id');
         $status        = strtolower($request->query('status'));
         $familyId      = $request->query('order_id');
@@ -33,7 +34,7 @@ class PaymentSuccessController extends Controller
 
         // Update payment_flows (use fallback if webhook failed)
         $flow = PaymentFlow::where('family_id', $familyId)
-            ->whereNull('transaction_id')
+            ->where('status', 'redirected') // ✅ More accurate than "whereNull('transaction_id')"
             ->latest()
             ->first();
 
