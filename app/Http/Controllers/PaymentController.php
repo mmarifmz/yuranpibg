@@ -77,7 +77,6 @@ class PaymentController extends Controller
         $billAmount = 100 + ($request->donation_amount ?? 0);
 
         $billCode = Str::random(10);
-        $returnUrl = route('payment.success', ['familyId' => $familyId]);
         $callbackUrl = route('payment.webhook'); // 👈 backend webhook for ToyyibPay to confirm payment
 
         if (app()->environment('local')) {
@@ -90,15 +89,15 @@ class PaymentController extends Controller
         $payload = [
             'userSecretKey' => env('TOYYIBPAY_SECRET_KEY'),
             'categoryCode' => env('TOYYIBPAY_CATEGORY_CODE'),
-            'billName' => 'Sumbangan PIBG 2025 / 2026',
+            'billName' => 'Bayaran Yuran PIBG 2025 / 2026',
             'billDescription' => $billDescription,
             'billPriceSetting' => 1,
             'billPayorInfo' => 1,
             'billAmount' => $billAmount * 100, // in cents
-            'billReturnUrl' => $returnUrl,
+            'billReturnUrl' => route('payment.return'), // Smart redirect handler
             'billCallbackUrl' => $callbackUrl,
             'billExternalReferenceNo' => $familyId,
-            'billTo' => $request->input('email'),
+            'billTo' => $studentDisplay,
             'billEmail' => $request->input('email'),
             'billPhone' => $request->input('phone'),
             'billSplitPayment' => 0,
@@ -133,6 +132,20 @@ class PaymentController extends Controller
             $data = $response->json();
             $billCode = $data[0]['BillCode'] ?? null;
             if ($billCode) {
+
+                PaymentFlow::create([
+                    'family_id'   => $familyId,
+                    'status'      => 'initiated',
+                    'created_at'  => now(),
+                    'bill_code'   => $billCode,
+                    'bill_email'  => $request->input('email'),
+                    'bill_phone'  => $request->input('phone'),
+                    'bill_amount' => 10000, // amount in sen
+                    'bill_to'     => $studentDisplay,
+                    'ip'          => $request->ip(),
+                    'user_agent'  => $request->userAgent(),
+                ]);
+
                 return redirect("https://toyyibpay.com/{$billCode}");
             }
         }

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Family;
+use App\Models\PaymentFlow;
+use App\Models\WebhookLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Models\Family;
-use App\Models\WebhookLog;
-use App\Models\PaymentFlow;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Redirect;
 
 class PaymentWebhookController extends Controller
 {
@@ -54,63 +54,72 @@ class PaymentWebhookController extends Controller
 
     public function retry(Request $request, $familyId)
     {
-        $family = \App\Models\Family::where('family_id', $familyId)->firstOrFail();
-        $students = \App\Models\Family::where('family_id', $familyId)->get();
+        $family = Family::where('family_id', $familyId)->firstOrFail();
 
-        $eldestStudent = $students->sortByDesc(function ($student) {
-            return (int) filter_var($student->class_name, FILTER_SANITIZE_NUMBER_INT);
-        })->first();
+        // Get last flow that contains usable email/phone
+        $flow = PaymentFlow::where('family_id', $familyId)
+            ->whereNotNull('bill_email')
+            ->latest()
+            ->firstOrFail();
 
-        $studentDisplay = Str::title(Str::lower($eldestStudent->student_name));
+        // Get students
+        $students = $family->students;
 
-        $billDescription = 'Bayaran Semula PIBG 2025/2026 untuk: ' . $studentDisplay;
-        $billAmount = 100; // Or calculate dynamically if needed
-        $billCode = Str::random(10);
+        // Get eldest student by class name number OR null
+        $eldestStudent = $students
+            ? $students->sortByDesc(fn ($s) => (int) filter_var($s->class_name, FILTER_SANITIZE_NUMBER_INT))->first()
+            : null;
+
+        // Fallback name logic
+        $studentName = $eldestStudent
+            ? Str::title(Str::lower($eldestStudent->student_name))
+            : 'Ibubapa ' . $family->family_id;
+
+        $billDescription = 'Bayaran Semula PIBG 2025/2026 untuk: ' . $studentName;
 
         $payload = [
-            'userSecretKey' => env('TOYYIBPAY_SECRET_KEY'),
-            'categoryCode' => env('TOYYIBPAY_CATEGORY_CODE'),
-            'billName' => 'Ulangan Bayaran PIBG 2025 / 2026',
-            'billDescription' => $billDescription,
-            'billPriceSetting' => 1,
-            'billPayorInfo' => 1,
-            'billAmount' => $billAmount * 100,
-            'billReturnUrl' => route('payment.return'),
-            'billCallbackUrl' => route('payment.webhook'),
+            'userSecretKey'           => env('TOYYIBPAY_SECRET_KEY'),
+            'categoryCode'            => env('TOYYIBPAY_CATEGORY_CODE'),
+            'billName'                => 'Ulangan Bayaran PIBG 2025 / 2026',
+            'billDescription'         => $billDescription,
+            'billPriceSetting'        => 1,
+            'billPayorInfo'           => 1,
+            'billAmount'              => 100 * 100, // in sen
+            'billReturnUrl'           => route('payment.return'),
+            'billCallbackUrl'         => route('payment.webhook'),
             'billExternalReferenceNo' => $familyId,
-            'billTo' => $request->input('email'),
-            'billEmail' => $request->input('email'),
-            'billPhone' => $request->input('phone'),
-            'billSplitPayment' => 0,
-            'billPaymentChannel' => 0,
-            'billDisplayMerchant' => 1
+            'billTo'                  => $studentName,
+            'billEmail'               => $flow->bill_email,
+            'billPhone'               => $flow->bill_phone,
+            'billSplitPayment'        => 0,
+            'billPaymentChannel'      => 0,
+            'billDisplayMerchant'     => 1,
         ];
 
-        $response = Http::asForm()->post('https://toyyibpay.com/index.php/api/createBill', $payload);
+        Log::info('Retry ToyyibPay Payload', $payload);
+
+        $response = \Http::asForm()->post('https://toyyibpay.com/index.php/api/createBill', $payload);
 
         if ($response->successful()) {
             $data = $response->json();
             $billCode = $data[0]['BillCode'] ?? null;
 
-            PaymentFlow::create([
-                'family_id'   => $familyId,
-                'status'      => 'initiated',
-                'initiated_at'=> now(),
-                'bill_code'   => $billCode,
-                'ip'          => $request->ip(),
-                'user_agent'  => $request->userAgent(),
-                'bill_email'  => $request->input('email'),
-                'bill_phone'  => $request->input('phone'),
-            ]);
+            if ($billCode) {
+                PaymentFlow::create([
+                    'family_id'   => $familyId,
+                    'status'      => 'initiated',
+                    'created_at'  => now(),
+                    'bill_code'   => $billCode,
+                    'bill_email'  => $flow->bill_email,
+                    'bill_phone'  => $flow->bill_phone,
+                    'ip'          => $request->ip(),
+                    'user_agent'  => $request->userAgent(),
+                ]);
 
-            return redirect("https://toyyibpay.com/{$billCode}");
+                return redirect("https://toyyibpay.com/{$billCode}");
+            }
         }
 
-        Log::error('Failed to regenerate bill for retry', [
-            'family_id' => $familyId,
-            'response' => $response->body(),
-        ]);
-
-        return back()->withErrors(['msg' => 'Gagal menjana semula bil. Sila cuba lagi.']);
+        return back()->with('error', 'Tidak dapat mencipta bil baru.');
     }
 }
