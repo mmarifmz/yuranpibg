@@ -2,36 +2,44 @@
 
 @section('content')
 <div class="container py-5">
-    <h3 class="text-danger">❌ Transaksi Tidak Berjaya</h3>
-    <p>Sila semak maklumat di bawah dan cuba semula:</p>
+    <div class="text-center mb-4">
+        <img src="{{ asset('storage/logo-ssp-167x168.png') }}" width="80">
+        <h5 class="fw-bold mb-4">PORTAL YURAN & SUMBANGAN PIBG<br>SEKOLAH KEBANGSAAN SRI PETALING</h5>
+    </div>
 
-    <ul class="list-group list-group-flush mb-4">
-        <li class="list-group-item"><strong>ID Keluarga:</strong> {{ $family->family_id ?? '-' }}</li>
-        <li class="list-group-item"><strong>Status:</strong> {{ strtoupper($flow->status ?? 'UNKNOWN') }}</li>
-        <li class="list-group-item"><strong>Transaksi:</strong> {{ $flow->transaction_id ?? '-' }}</li>
-        <li class="list-group-item">
-            <strong>Jumlah:</strong> 
-            RM {{ isset($flow->amount) ? number_format($flow->amount / 100, 2) : '0.00' }}
-        </li>
-    </ul>
+    <h3 class="text-danger text-center">❌ Transaksi Tidak Berjaya</h3>
+    <p class="text-center">Sila semak maklumat transaksi di bawah dan cuba semula:</p>
 
-    @if ($flow && $flow->bill_code && $flow->status !== 'paid')
-        {{-- Legacy retry using original bill link --}}
-        <a href="https://toyyibpay.com/{{ $flow->bill_code }}" class="btn btn-outline-secondary me-3">
-            🔁 Guna Bil Sedia Ada
-        </a>
-    @endif
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h5>Maklumat Pembayar</h5>
+            <ul class="list-group list-group-flush mb-4">
+                <li class="list-group-item"><strong>ID Keluarga:</strong> {{ $family->family_id }}</li>
+                <li class="list-group-item"><strong>Nama Murid:</strong> {{ $flow->bill_to ?? '-' }}</li>
+                <li class="list-group-item"><strong>Email:</strong> {{ $flow->bill_email ?? '-' }}</li>
+                <li class="list-group-item"><strong>No Telefon:</strong> {{ $flow->bill_phone ?? '-' }}</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h5>Butiran Transaksi</h5>
+            <div class="p-3 bg-light border rounded">
+                <p><strong>Status:</strong> {{ strtoupper($flow->status ?? '-') }}</p>
+                <p><strong>Transaksi:</strong> {{ $flow->transaction_id ?? '-' }}</p>
+                <p><strong>Nama Murid:</strong> {{ $flow->bill_to ?? '-' }}</p>
+                <p><strong>BillCode:</strong> {{ $flow->bill_code ?? '-' }}</p>
+                <p><strong>Jumlah:</strong> RM {{ number_format(($flow->bill_amount ?? 0) / 100, 2) }}</p>
+                <p><strong>Dibatalkan Pada:</strong> {{ $flow->cancelled_at ? \Carbon\Carbon::parse($flow->cancelled_at)->format('d-m-Y') : '-' }}</p>
+            </div>
+        </div>
+    </div>
 
-    @if ($flow && $flow->status !== 'paid')
-        {{-- Safer Retry: regenerate new bill --}}
-        <form action="{{ route('payment.retry', $family->family_id) }}" method="POST" class="d-inline-block">
+    <div class="text-center mt-4">
+        <form method="POST" action="{{ route('payment.retry', $family->family_id) }}">
             @csrf
-            <input type="hidden" name="email" value="{{ $flow->bill_email ?? 'unknown@domain.com' }}">
-            <input type="hidden" name="phone" value="{{ $flow->bill_phone ?? '' }}">
             <button type="submit" class="btn btn-danger">
-                🔄 Cuba Bayar Semula
+                <i class="fas fa-redo-alt"></i> Cuba Bayar Semula
             </button>
         </form>
-    @endif
+    </div>
 </div>
 @endsection
