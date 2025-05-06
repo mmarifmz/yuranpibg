@@ -144,7 +144,7 @@
                                 $familyStatus = $students->every(fn($s) => $s->payment_status === 'paid') ? 'paid' : 'pending';
                             @endphp
                             <span class="badge status-badge {{ $familyStatus }}">{{ ucfirst($familyStatus) }}</span>
-                            <small class="text-muted">Family : SSP/{{ $familyId }}</small>
+                            <small class="text-muted">Siri Keluarga : <strong>SSP/{{ $familyId }}</strong></small>
                         </div>
                         <div class="card-body">
                             @foreach($students as $student)
