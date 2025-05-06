@@ -62,30 +62,15 @@ class PaymentController extends Controller
         ]);
 
         $family = Family::where('family_id', $familyId)->firstOrFail();
-        $students = Family::where('family_id', $familyId)->get();
+        $students = Family::getStudentsByFamilyId($familyId);
 
-        // Sort descending by class level (assuming class format like "6 ANGGERIK")
-        $students = $students->sortByDesc(function ($student) {
-            return (int) filter_var($student->class_name, FILTER_SANITIZE_NUMBER_INT);
-        });
-
-        $eldestStudent = $students->first();
+        $eldestStudent = $students->sortByDesc(fn($s) => (int) filter_var($s->class_name, FILTER_SANITIZE_NUMBER_INT))->first();
         $studentDisplay = Str::title(Str::lower($eldestStudent->student_name));
-
         $billDescription = 'Bayaran PIBG 2025/2026 untuk: ' . $studentDisplay;
 
-        $billAmount = 100 + ($request->donation_amount ?? 0);
+        $billAmount = app()->environment('local') ? 1 : 100 + ($request->donation_amount ?? 0);
+        $callbackUrl = route('payment.webhook');
 
-        $billCode = Str::random(10);
-        $callbackUrl = route('payment.webhook'); // 👈 backend webhook for ToyyibPay to confirm payment
-
-        if (app()->environment('local')) {
-            $billAmount = 1; // Always RM 1 in local
-        } else {
-            $billAmount = 100 + ($request->donation_amount ?? 0);
-        }
-
-        // ToyyibPay params
         $payload = [
             'userSecretKey' => env('TOYYIBPAY_SECRET_KEY'),
             'categoryCode' => env('TOYYIBPAY_CATEGORY_CODE'),
@@ -93,8 +78,8 @@ class PaymentController extends Controller
             'billDescription' => $billDescription,
             'billPriceSetting' => 1,
             'billPayorInfo' => 1,
-            'billAmount' => $billAmount * 100, // in cents
-            'billReturnUrl' => route('payment.return'), // Smart redirect handler
+            'billAmount' => $billAmount * 100,
+            'billReturnUrl' => route('payment.return'),
             'billCallbackUrl' => $callbackUrl,
             'billExternalReferenceNo' => $familyId,
             'billTo' => $studentDisplay,
@@ -105,51 +90,78 @@ class PaymentController extends Controller
             'billDisplayMerchant' => 1
         ];
 
-        // Track when user gets redirected to ToyyibPay
-        PaymentFlow::where('family_id', $familyId)
-            ->where('status', 'initiated')
-            ->latest()
-            ->first()
-            ?->update([
-                'status' => 'redirected',
-                'redirected_at' => now(),
-                'bill_email' => $request->input('email'),
-                'bill_phone' => $request->input('phone'),
-            ]);
-
-        // debug payload
         Log::info('ToyyibPay payload', $payload);
         Log::debug("Generated billDescription: [$billDescription]");
 
         $response = Http::asForm()->post('https://toyyibpay.com/index.php/api/createBill', $payload);
 
-        \Log::error('ToyyibPay Error Response:', [
-            'body' => $response->body(),
-            'status' => $response->status()
-        ]);
-        
-        if ($response->successful()) {
-            $data = $response->json();
-            $billCode = $data[0]['BillCode'] ?? null;
-            if ($billCode) {
-
-                PaymentFlow::create([
-                    'family_id'   => $familyId,
-                    'status'      => 'initiated',
-                    'created_at'  => now(),
-                    'bill_code'   => $billCode,
-                    'bill_email'  => $request->input('email'),
-                    'bill_phone'  => $request->input('phone'),
-                    'bill_amount' => 10000, // amount in sen
-                    'bill_to'     => $studentDisplay,
-                    'ip'          => $request->ip(),
-                    'user_agent'  => $request->userAgent(),
-                ]);
-
-                return redirect("https://toyyibpay.com/{$billCode}");
-            }
+        if (!$response->successful()) {
+            Log::error('ToyyibPay Error Response:', [
+                'body' => $response->body(),
+                'status' => $response->status()
+            ]);
+            return back()->withErrors(['msg' => 'Gagal menjana bil. Sila cuba lagi.']);
         }
 
-        return back()->withErrors(['msg' => 'Gagal menjana bil. Sila cuba lagi.']);
+        $data = $response->json();
+        $billCode = $data[0]['BillCode'] ?? null;
+
+        if (!$billCode) {
+            return back()->withErrors(['msg' => 'ToyyibPay tidak mengembalikan BillCode.']);
+        }
+
+        // Try to find existing flow to reuse
+        $existingFlow = PaymentFlow::where('family_id', $familyId)
+            ->whereNull('transaction_id')
+            ->latest()
+            ->first();
+
+        if ($existingFlow) {
+            $existingFlow->update([
+                'status' => 'redirected',
+                'redirected_at' => now(),
+                'bill_email' => $request->input('email'),
+                'bill_phone' => $request->input('phone'),
+                'bill_amount' => $billAmount * 100,
+                'bill_to' => $studentDisplay,
+                'bill_code' => $billCode,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        } else {
+            PaymentFlow::create([
+                'family_id' => $familyId,
+                'status' => 'initiated',
+                'initiated_at' => now(),
+                'bill_code' => $billCode,
+                'bill_email' => $request->input('email'),
+                'bill_phone' => $request->input('phone'),
+                'bill_amount' => $billAmount * 100,
+                'bill_to' => $studentDisplay,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+
+        return redirect("https://toyyibpay.com/{$billCode}");
+    }
+
+    public function review($familyId)
+    {
+        // All student rows are in families table
+        $students = Family::where('family_id', $familyId)->get();
+
+        // Just take the first row as the family's main info (e.g., from eldest student)
+        $family = $students->firstOrFail();
+
+        // Reset any previous unfinished flows
+        PaymentFlow::where('family_id', $familyId)
+            ->whereIn('status', ['initiated', 'redirected'])
+            ->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+            ]);
+
+        return view('payment.review', compact('family', 'students', 'familyId'));
     }
 }

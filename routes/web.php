@@ -23,7 +23,7 @@ Route::get('/preview-more', [StudentController::class, 'loadMorePreview'])->name
 | Payment Flow Routes
 |--------------------------------------------------------------------------
 */
-Route::get('/review-payment/{familyId}', [PaymentController::class, 'reviewPayment'])->name('review.payment');
+Route::get('/review-payment/{familyId}', [PaymentController::class, 'review'])->name('payment.review');
 Route::post('/confirm-payment/{familyId}', [PaymentController::class, 'confirmPayment'])->name('confirm.payment');
 
 // ToyyibPay - Server to Server Callback (backend verification)

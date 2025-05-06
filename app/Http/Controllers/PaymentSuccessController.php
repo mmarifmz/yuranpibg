@@ -54,6 +54,8 @@ class PaymentSuccessController extends Controller
             'status'         => $isPaid ? 'paid' : 'cancelled',
             'paid_at'        => $isPaid ? now() : null,
             'cancelled_at'   => !$isPaid ? now() : null,
+            'bill_amount'    => $flow->bill_amount ?? 10000, // fallback if needed
+    'bill_to'        => $flow->bill_to ?? 'Nama tidak ditemui',
         ]);
 
         // Save into webhook_logs table (updated for correct schema)
@@ -87,7 +89,7 @@ class PaymentSuccessController extends Controller
         $students = $family->students ?? collect();
         $flow = PaymentFlow::where('family_id', $familyId)->latest()->first();
 
-        return view('payment.summary', compact('family', 'students', 'flow'));
+        return view('payment.summary', compact('family', 'students', 'flow', 'familyId'));
     }
 
     // Web version of receipt
