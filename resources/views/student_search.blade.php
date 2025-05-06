@@ -166,7 +166,7 @@
 
                             @if($anyPending)
                                 <div class="mt-3">
-                                    <a href="{{ route('review.payment', ['familyId' => $familyId]) }}"
+                                    <a href="{{ route('payment.review', ['familyId' => $familyId]) }}"
                                        class="btn btn-success w-100 rounded-pill fw-semibold">
                                         <i class="bi bi-cash-coin me-2"></i> Bayar Yuran & Sumbangan
                                     </a>

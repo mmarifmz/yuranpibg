@@ -34,12 +34,9 @@
     </div>
 
     <div class="text-center mt-4">
-        <form method="POST" action="{{ route('payment.retry', $family->family_id) }}">
-            @csrf
-            <button type="submit" class="btn btn-danger">
-                <i class="fas fa-redo-alt"></i> Cuba Bayar Semula
-            </button>
-        </form>
+        <a href="{{ route('payment.review', ['familyId' => $familyId]) }}" class="btn btn-danger">
+            🔁 Kembali & Cuba Bayar Semula
+        </a>
     </div>
 </div>
 @endsection

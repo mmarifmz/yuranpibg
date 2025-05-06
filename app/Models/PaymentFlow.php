@@ -18,6 +18,8 @@ class PaymentFlow extends Model
         'paid_at',
         'transaction_id',
         'bill_code',
+        'bill_to',
+        'bill_amount',
         'ip',
         'user_agent',
         'bill_email',
