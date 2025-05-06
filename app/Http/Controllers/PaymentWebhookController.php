@@ -100,9 +100,12 @@ class PaymentWebhookController extends Controller
 
         $billDescription = 'Bayaran Semula PIBG 2025/2026 untuk: ' . $studentName;
 
+        $secretKey = config('services.toyyibpay.secret_key');
+        $categoryCode = config('services.toyyibpay.category_code');
+        
         $payload = [
-            'userSecretKey'           => env('TOYYIBPAY_SECRET_KEY'),
-            'categoryCode'            => env('TOYYIBPAY_CATEGORY_CODE'),
+            'userSecretKey' => $secretKey,
+            'categoryCode' => $categoryCode,
             'billName'                => 'Ulangan Bayaran PIBG 2025 / 2026',
             'billDescription'         => $billDescription,
             'billPriceSetting'        => 1,
