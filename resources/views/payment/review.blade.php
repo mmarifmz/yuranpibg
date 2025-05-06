@@ -19,7 +19,7 @@
                     <hr class="border-white">
                     <p class="mb-1">Yuran PIBG 2025/2026</p>
                     <h3 class="fw-bold">RM 100.00</h3>
-                    <p class="mt-4 mb-1">📌 Keluarga ID:</p>
+                    <p class="mt-4 mb-1">📌 Siri Keluarga:</p>
                     <p class="fw-semibold">SSP/{{ $familyId }}</p>
                     <p class="mb-1">👪 Jumlah Anak:</p>
                     <p class="fw-semibold">{{ $students->count() }}</p>

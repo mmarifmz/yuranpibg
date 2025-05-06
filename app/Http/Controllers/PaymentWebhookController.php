@@ -12,44 +12,67 @@ use Illuminate\Support\Facades\Redirect;
 
 class PaymentWebhookController extends Controller
 {
+
     public function handle(Request $request)
     {
         $payload = $request->all();
+        Log::info('ToyyibPay Webhook Payload:', $payload);
 
-        Log::info('ToyyibPay Webhook Received', $payload);
-
+        $billCode = $payload['billcode'] ?? null;
         $transactionId = $payload['transaction_id'] ?? null;
-        $billCode      = $payload['billcode'] ?? null;
-        $familyId      = $payload['order_id'] ?? null;
-        $amount        = $payload['amount'] ?? null;
-        $status        = strtolower($payload['status'] ?? '');
+        $statusId = $payload['status_id'] ?? null;
+        $familyId = $payload['order_id'] ?? null;
+        $isPaid = $statusId === '1';
 
-        if (!$transactionId || !$billCode || !$familyId) {
-            Log::warning('Webhook missing required fields', $payload);
-            return response('Missing fields', 400);
+        if (!$billCode || !$transactionId || !$familyId) {
+            Log::warning('Webhook missing key data.', compact('billCode', 'transactionId', 'familyId'));
+            return response()->json(['error' => 'Invalid webhook payload'], 400);
         }
 
-        // Save Webhook Log
+        // Update payment_flows
+        $flow = PaymentFlow::where('bill_code', $billCode)->latest()->first();
+
+        if ($flow) {
+            $flow->fill([
+                'transaction_id' => $transactionId,
+                'status' => $isPaid ? 'paid' : 'cancelled',
+                'paid_at' => $isPaid ? now() : null,
+                'cancelled_at' => !$isPaid ? now() : null,
+                'bill_amount' => $flow->bill_amount ?? 10000,
+                'bill_to' => $flow->bill_to ?? 'Nama tidak ditemui',
+            ])->save();
+
+            Log::info("✅ PaymentFlow updated for $billCode");
+        } else {
+            Log::warning("❌ PaymentFlow not found for BillCode: $billCode");
+        }
+
+        // Update families table
+        if ($isPaid) {
+            $family = Family::where('family_id', $familyId)->first();
+            if ($family) {
+                $family->update([
+                    'payment_status' => 'paid',
+                    'payment_reference' => $transactionId,
+                    'amount_paid' => ($flow->bill_amount ?? 10000) / 100,
+                    'paid_at' => now(),
+                ]);
+                Log::info("✅ Family table updated for $familyId");
+            } else {
+                Log::warning("❌ Family not found for ID: $familyId");
+            }
+        }
+
+        // Save raw webhook payload
         WebhookLog::create([
-            'family_id'      => $familyId,
+            'family_id' => $familyId,
             'transaction_id' => $transactionId,
-            'status'         => $status,
-            'amount'         => $amount,
-            'raw_payload'    => json_encode($payload),
+            'status' => $statusId,
+            'amount' => ($flow->bill_amount ?? 10000) / 100,
+            'raw_payload' => json_encode($payload, JSON_PRETTY_PRINT),
         ]);
 
-        // Update Payment Flow
-        $payment = PaymentFlow::where('family_id', $familyId)
-            ->where('transaction_id', $transactionId)
-            ->orWhereNull('transaction_id')
-            ->latest()
-            ->first();
-
-        if ($payment) {
-            $payment->updateFromWebhook($transactionId, $billCode, $status);
-        }
-
-        return response('OK', 200);
+        return response()->json(['message' => 'Webhook processed']);
     }
 
     public function retry(Request $request, $familyId)

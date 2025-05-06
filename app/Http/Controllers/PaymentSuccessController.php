@@ -14,72 +14,80 @@ use PDF;
 
 class PaymentSuccessController extends Controller
 {
-    // Handle ToyyibPay return
-
     public function handleToyyibPayReturn(Request $request)
     {
-        $transactionId = $request->query('transaction_id');
-        $statusParam   = $request->query('status') ?? $request->query('status_id');
-        $status        = strtolower((string) $statusParam);
-        $familyId      = $request->query('order_id');
-        $billCode      = $request->query('billcode');
-        $amount        = $request->query('amount') ?? 0;
+        $query = $request->query();
+        Log::debug('ToyyibPay RETURN params', $query);
 
-        if (!$transactionId || !$status || !$familyId || !$billCode) {
-            Log::warning('Missing transaction_id, status, family_id or billcode in ToyyibPay return', [
-                'ip'     => $request->ip(),
-                'agent'  => $request->userAgent(),
-                'params' => $request->all(),
-            ]);
-            return redirect('/')->with('error', 'Maklumat transaksi tidak lengkap.');
+        $statusId = $query['status_id'] ?? null;
+        $billCode = $query['billcode'] ?? null;
+        $transactionId = $query['transaction_id'] ?? null;
+        $familyId = $query['order_id'] ?? null;
+        $isPaid = $statusId === '1';
+
+        if (!$billCode || !$transactionId || !$familyId) {
+            Log::warning('Missing ToyyibPay return params', compact('statusId', 'billCode', 'transactionId', 'familyId'));
+            return redirect()->route('payment.summary', ['familyId' => $familyId ?? 'unknown']);
         }
-
-        Log::debug('ToyyibPay RETURN params', $request->query());
 
         $flow = PaymentFlow::where('bill_code', $billCode)->latest()->first();
 
         if (!$flow) {
-            Log::warning('No matching payment flow found for returned bill_code', [
-                'bill_code'      => $billCode,
-                'transaction_id' => $transactionId,
-                'status'         => $status,
-            ]);
+            Log::warning('No matching payment flow found for returned bill_code', compact('billCode', 'transactionId', 'statusId'));
             return redirect()->route('payment.summary', ['familyId' => $familyId]);
         }
 
-        $isPaid = $status === 'success' || $status === '1';
-
-        $flow->update([
+        // Update payment_flow record
+        $flow->fill([
             'transaction_id' => $transactionId,
-            'status'         => $isPaid ? 'paid' : 'cancelled',
-            'paid_at'        => $isPaid ? now() : null,
-            'cancelled_at'   => !$isPaid ? now() : null,
-            'bill_amount'    => $flow->bill_amount ?? 10000, // fallback if needed
-    'bill_to'        => $flow->bill_to ?? 'Nama tidak ditemui',
-        ]);
+            'status' => $isPaid ? 'paid' : 'cancelled',
+            'paid_at' => $isPaid ? now() : null,
+            'cancelled_at' => !$isPaid ? now() : null,
+            'bill_amount' => $flow->bill_amount ?? 10000,
+            'bill_to' => $flow->bill_to ?? 'Nama tidak ditemui',
+        ])->save();
 
-        // Save into webhook_logs table (updated for correct schema)
-        WebhookLog::create([
-            'family_id'      => $familyId,
-            'transaction_id' => $transactionId,
-            'status'         => $status,
-            'amount'         => $amount / 100, // Convert from sen to RM if needed
-            'raw_payload'    => json_encode($request->query(), JSON_PRETTY_PRINT),
-        ]);
+        Log::info("✅ PaymentFlow updated via return handler for $billCode");
 
-        return $isPaid
-            ? redirect()->route('payment.success', ['familyId' => $familyId])
-            : redirect()->route('payment.summary', ['familyId' => $familyId]);
-    } 
+        // Update family record on success
+        if ($isPaid) {
+            $family = Family::where('family_id', $familyId)->first();
+            if ($family) {
+                $family->update([
+                    'payment_status' => 'paid',
+                    'payment_reference' => $transactionId,
+                    'amount_paid' => ($flow->bill_amount ?? 10000) / 100,
+                    'paid_at' => now(),
+                ]);
+                Log::info("✅ Family record updated via return handler for $familyId");
+            }
+        }
+
+        return redirect()->route(
+            $isPaid ? 'payment.success' : 'payment.summary',
+            ['familyId' => $familyId]
+        );
+    }
 
     // Show success page
     public function show($familyId)
     {
         $family = Family::where('family_id', $familyId)->firstOrFail();
-        $students = $family->students ?? collect();
+        $students = Family::getStudentsByFamilyId($familyId);
         $flow = PaymentFlow::where('family_id', $familyId)->where('status', 'paid')->latest()->first();
 
-        return view('payment.success', compact('family', 'students', 'flow'));
+        // ✅ Prevent access if no paid flow found
+        if (!$flow) {
+            return redirect('/')->with('error', 'Transaksi tidak sah atau belum dibayar.');
+        }
+
+        return view('payment.success', [
+            'family' => $family,
+            'students' => $students,
+            'flow' => $flow,
+            'transactionId' => $flow->transaction_id,
+            'amount' => $flow->bill_amount,
+        ]);
     }
 
     // Show fallback summary if failed
@@ -89,16 +97,12 @@ class PaymentSuccessController extends Controller
         $students = $family->students ?? collect();
         $flow = PaymentFlow::where('family_id', $familyId)->latest()->first();
 
+        // ✅ If the latest flow is already paid, redirect to receipt
+        if ($flow && $flow->status === 'paid') {
+            return redirect()->route('payment.success', ['familyId' => $familyId]);
+        }
+
         return view('payment.summary', compact('family', 'students', 'flow', 'familyId'));
-    }
-
-    // Web version of receipt
-    public function webreceipt($familyId)
-    {
-        $family = Family::where('family_id', $familyId)->firstOrFail();
-        $flow = PaymentFlow::where('family_id', $familyId)->where('status', 'paid')->latest()->first();
-
-        return view('payment.receipt', compact('family', 'flow'));
     }
 
     // Downloadable PDF receipt

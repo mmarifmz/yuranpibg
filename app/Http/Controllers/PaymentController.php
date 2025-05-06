@@ -146,8 +146,16 @@ class PaymentController extends Controller
         return redirect("https://toyyibpay.com/{$billCode}");
     }
 
-    public function review($familyId)
+    public function review(Request $request, $familyId)
     {
+        // Log the visit to review-payment page
+        ReviewLog::create([
+            'family_id' => $familyId,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'visited_at' => now(),
+        ]);
+
         // All student rows are in families table
         $students = Family::where('family_id', $familyId)->get();
 

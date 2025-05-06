@@ -36,13 +36,14 @@ Route::post('/payment-update', [FamilyController::class, 'updatePayment'])->name
 Route::get('/payment-return', [PaymentSuccessController::class, 'handleToyyibPayReturn'])->name('payment.return');
 
 //  Success / Summary page after payment
-Route::get('/payment-success/{familyId}', [PaymentSuccessController::class, 'show'])->name('payment.success');
+Route::get('/payment-success/{familyId}', [PaymentSuccessController::class, 'show'])
+    ->name('payment.success')
+    ->middleware('throttle:10,1'); // prevent abuse
 Route::get('/payment-summary/{familyId}', [PaymentSuccessController::class, 'summary'])->name('payment.summary');
 Route::post('/payment-retry/{familyId}', [PaymentWebhookController::class, 'retry'])->name('payment.retry');
 
 // Receipt PDF and public view
 Route::get('/download-receipt/{familyId}', [PaymentSuccessController::class, 'downloadReceipt'])->name('download.receipt');
-Route::get('/resit/{familyId}', [PaymentSuccessController::class, 'webReceipt'])->name('receipt.web');
 
 /*
 |--------------------------------------------------------------------------
