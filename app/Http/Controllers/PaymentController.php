@@ -71,9 +71,12 @@ class PaymentController extends Controller
         $billAmount = app()->environment('local') ? 1 : 100 + ($request->donation_amount ?? 0);
         $callbackUrl = route('payment.webhook');
 
+        $secretKey = config('services.toyyibpay.secret_key');
+        $categoryCode = config('services.toyyibpay.category_code');
+
         $payload = [
-            'userSecretKey' => env('TOYYIBPAY_SECRET_KEY'),
-            'categoryCode' => env('TOYYIBPAY_CATEGORY_CODE'),
+            'userSecretKey' => $secretKey,
+            'categoryCode' => $categoryCode,
             'billName' => 'Bayaran Yuran PIBG 2025 / 2026',
             'billDescription' => $billDescription,
             'billPriceSetting' => 1,
