@@ -71,6 +71,7 @@ class PaymentController extends Controller
         $billAmount = app()->environment('local') ? 1 : 100 + ($request->donation_amount ?? 0);
         $callbackUrl = route('payment.webhook');
 
+        //production calling .env
         $secretKey = config('services.toyyibpay.secret_key');
         $categoryCode = config('services.toyyibpay.category_code');
 
