@@ -5,8 +5,6 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentSuccessController;
 use App\Http\Controllers\PaymentWebhookController;
-use App\Http\Controllers\AdminWebhookLogController;
-use App\Http\Controllers\AdminPendingReportController;
 use App\Http\Controllers\FamilyController;
 
 /*
@@ -47,8 +45,9 @@ Route::get('/download-receipt/{familyId}', [PaymentSuccessController::class, 'do
 
 /*
 |--------------------------------------------------------------------------
-| Admin Views - Logs and Reports
+| Backoffice Views - Logs and Reports
 |--------------------------------------------------------------------------
 */
-Route::get('/admin/webhook-logs', [AdminWebhookLogController::class, 'index'])->name('admin.webhook.logs');
-Route::get('/admin/reports/pending-parents', [AdminPendingReportController::class, 'index'])->name('admin.reports.pending');
+use App\Http\Controllers\PejabatDashboardController;
+
+Route::get('/pejabat/dashboard', [PejabatDashboardController::class, 'index'])->name('pejabat.dashboard');
