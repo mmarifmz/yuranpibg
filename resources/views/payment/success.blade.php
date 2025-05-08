@@ -51,7 +51,7 @@
 
     <div class="row justify-content-center mb-4"> 
         <div class="receipt-container shadow receipt-content">
-            <h4 class="text-center mb-4">Official Receipt <span class="text-secondary">PIBG SSP</span></h4>
+            <h4 class="text-center mb-5">Official Receipt / Resit Rasmi<br/><span class="text-secondary">Persatuan IbuBapa & Guru <br/>Sekolah Kebangsaan Sri Petaling</span></h4>
 
             <p><span class="label">Date / Tarikh:</span> <span class="value">{{ \Carbon\Carbon::parse($flow->paid_at)->format('d-m-Y') }}</span></p>
             <p><span class="label">Receipt No:</span> <span class="value">{{ $flow->transaction_id }}</span></p>
@@ -67,6 +67,8 @@
                 <span class="label">Issued by / Yang menerima:</span> 
                 <span class="value">PIBG Sekolah Kebangsaan Sri Petaling</span>
             </p>
+            <p class="footer">Resit ini dijana secara automatik. Tidak memerlukan tandatangan.<br>
+    Terima kasih atas sumbangan anda kepada PIBG sekolah.</p>
         </div>
         <div class="col-md-8 mt-4 text-center">
             <a 
@@ -76,7 +78,7 @@
             >
                 📤 Kongsi Resit ke WhatsApp
             </a>
-            <a href="#" class="btn btn-success mb-2">
+            <a href="{{ route('download.receipt', $family->family_id) }}" class="btn btn-success mb-2">
                 ⬇️ Muat Turun Resit (PDF)
             </a>
             <a href="/" class="btn btn-success mb-2">

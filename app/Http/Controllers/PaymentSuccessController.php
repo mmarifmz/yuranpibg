@@ -111,9 +111,32 @@ class PaymentSuccessController extends Controller
     public function downloadReceipt($familyId)
     {
         $family = Family::where('family_id', $familyId)->firstOrFail();
-        $flow = PaymentFlow::where('family_id', $familyId)->where('status', 'paid')->latest()->first();
+        $students = Family::getStudentsByFamilyId($familyId);
+        $flow = PaymentFlow::where('family_id', $familyId)
+            ->where('status', 'paid')
+            ->latest()
+            ->first();
 
-        $pdf = PDF::loadView('payment.receipt', compact('family', 'flow'));
-        return $pdf->download("resit-{$familyId}.pdf");
+        if (!$flow) {
+            return redirect('/')->with('error', 'Transaksi tidak sah atau belum dibayar.');
+        }
+
+        // Get eldest student (assuming highest class_name)
+        $eldestStudent = $students->sortByDesc(function ($student) {
+            return (int) filter_var($student->class_name, FILTER_SANITIZE_NUMBER_INT);
+        })->first();
+
+        $studentName = $eldestStudent->student_name . ' (' . $eldestStudent->class_name . ')';
+        $familyId = $family->family_id;
+
+        $pdf = PDF::loadView('payment.receipt_pdf', [
+            'family' => $family,
+            'students' => $students,
+            'transaction' => $flow,
+            'studentName' => $studentName,
+            'familyId' => $familyId
+        ]);
+
+        return $pdf->download("Resit-Yuran-PIBG-SSP-2025-{$familyId}.pdf");
     }
 }
