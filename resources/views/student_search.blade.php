@@ -81,7 +81,17 @@
                             <p class="small text-start mb-0">
                                 Sekiranya terdapat sebarang masalah atau pertanyaan mengenai portal ini, sila hubungi:
                                 <br>
-                                <strong>AJK PIBG</strong> atau <strong>guru kelas anak anda</strong>.
+                                <p><strong>Datin Harpreet</strong>
+                                  <a href="https://wa.me/60126779954" target="_blank" style="text-decoration: none;">
+                                    012 677 9954
+                                  </a>
+                                <br>
+
+                                <strong>Pn. Mariam</strong>
+                                  <a href="https://wa.me/60136454001" target="_blank" style="text-decoration: none;">
+                                    013 6454 001
+                                  </a>
+                                </p>
                             </p>
                         </div>
                     </div>
@@ -224,5 +234,9 @@
         renderLazyCards();
     }
 </script>
+<footer style="text-align: center; font-size: 12px; color: #888; margin-top: 40px;">
+    Sistem direka oleh <strong>Biro ICT, PIBG Sekolah Kebangsaan Sri Petaling</strong> 2025/2026 | Pembangun Sistem 
+    <strong><a href="https://arif.my" target="_blank" style="color: #888; text-decoration: none;">Arif + Co.</a></strong>
+</footer>
 </body>
 </html>
