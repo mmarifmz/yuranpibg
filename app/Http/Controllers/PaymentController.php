@@ -70,7 +70,9 @@ class PaymentController extends Controller
 
         $students = Family::where('family_id', $familyId)->get();
 
-        $baseAmount = $students->sum('amount_due');
+        $baseAmount = $students->sortByDesc(function($s) {
+            return intval(preg_replace('/\D/', '', $s->class_name)); // Extract year like 6 from '6 ANGGERIK'
+        })->first()->amount_due ?? 0;
         $donationAmount = (float) ($request->donation_amount ?? 0);
 
         // Total bill in RM
