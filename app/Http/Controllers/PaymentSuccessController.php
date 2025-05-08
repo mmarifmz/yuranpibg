@@ -51,15 +51,17 @@ class PaymentSuccessController extends Controller
 
         // Update family record on success
         if ($isPaid) {
-            $family = Family::where('family_id', $familyId)->first();
-            if ($family) {
-                $family->update([
-                    'payment_status' => 'paid',
-                    'payment_reference' => $transactionId,
-                    'amount_paid' => ($flow->bill_amount ?? 10000) / 100,
-                    'paid_at' => now(),
-                ]);
-                Log::info("✅ Family record updated via return handler for $familyId");
+            $updated = Family::where('family_id', $familyId)->update([
+                'payment_status' => 'paid',
+                'payment_reference' => $transactionId,
+                'amount_paid' => ($flow->bill_amount ?? 10000) / 100,
+                'paid_at' => now(),
+            ]);
+
+            if ($updated) {
+                Log::info("✅ Family table updated for ALL under ID: $familyId");
+            } else {
+                Log::warning("❌ No records updated for family ID: $familyId");
             }
         }
 
