@@ -68,7 +68,14 @@ class PaymentController extends Controller
         $studentDisplay = Str::title(Str::lower($eldestStudent->student_name));
         $billDescription = 'Bayaran PIBG 2025/2026 untuk: ' . $studentDisplay;
 
-        $billAmount = app()->environment('local') ? 1 : 100 + ($request->donation_amount ?? 0);
+        $students = Family::where('family_id', $familyId)->get();
+
+        $baseAmount = $students->sum('amount_due');
+        $donationAmount = (float) ($request->donation_amount ?? 0);
+
+        // Total bill in RM
+        $billAmount = app()->environment('local') ? 1 : ($baseAmount + $donationAmount);
+
         $callbackUrl = route('payment.webhook');
 
         //production calling .env
