@@ -95,12 +95,13 @@
                         @endif
 
                         <div class="mb-3">
-                          <label class="form-label">Sumbangan Ikhlas PIBG</label>
+                          <label class="form-label">Sumbangan Tabung Pembangunan PIBG SSP</label>
                           <div class="d-flex flex-wrap gap-2 mb-2">
-                            <button class="btn btn-outline-success" type="button" onclick="setIkhlas(20)">RM20</button>
                             <button class="btn btn-outline-success" type="button" onclick="setIkhlas(50)">RM50</button>
                             <button class="btn btn-outline-success" type="button" onclick="setIkhlas(100)">RM100</button>
-                            <button class="btn btn-outline-success" type="button" onclick="setIkhlas(150)">RM150</button>
+                            <button class="btn btn-outline-success" type="button" onclick="setIkhlas(250)">RM250</button>
+                            <button class="btn btn-outline-success" type="button" onclick="setIkhlas(500)">RM500</button>
+                            <button class="btn btn-outline-success" type="button" onclick="setIkhlas(1000)">RM1000</button>
                           </div>
                           <div class="input-group">
                             <span class="input-group-text">RM</span>
