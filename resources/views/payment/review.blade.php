@@ -95,7 +95,7 @@
                         @endif
 
                         <div class="mb-3">
-                          <label class="form-label">Sumbangan Tabung Pembangunan PIBG SSP</label>
+                          <label class="form-label">Sumbangan Ikhlas Tabung Pembangunan PIBG SSP</label>
                           <div class="d-flex flex-wrap gap-2 mb-2">
                             <button class="btn btn-outline-success" type="button" onclick="setIkhlas(50)">RM50</button>
                             <button class="btn btn-outline-success" type="button" onclick="setIkhlas(100)">RM100</button>
