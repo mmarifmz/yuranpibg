@@ -7,6 +7,35 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ asset('storage/logo-ssp-167x168.png') }}" alt="SSP Logo" width="40" class="me-2">
+                PIBG SK Sri Petaling 2025/2026
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Yuran Portal</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pejabat/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pejabat/status">Status by Kelas</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Push content below navbar -->
+    <div style="height: 80px;"></div>
+
     <div class="container py-5">
         <h2 class="mb-4">Status Pembayaran PIBG Mengikut Kelas</h2>
         <small>

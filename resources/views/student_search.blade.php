@@ -152,9 +152,33 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             @php
                                 $familyStatus = $students->every(fn($s) => $s->payment_status === 'paid') ? 'paid' : 'pending';
+                                $amountPaid   = $students->firstWhere('amount_paid', '!=', null)?->amount_paid ?? 0;
+                                $isPaid = $familyStatus === 'paid';
                             @endphp
-                            <span class="badge status-badge {{ $familyStatus }}">{{ ucfirst($familyStatus) }}</span>
+                            
+                            @if($isPaid)
+                                <div class="mb-2">
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Paid
+                                    </span>
+
+                                    <span class="badge bg-primary">Yuran</span>
+
+                                    @if($amountPaid > 100.00)
+                                        <span class="badge bg-warning text-dark">Sumbangan Ikhlas</span>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="badge status-badge pending">Pending Payment</span>
+                            @endif
+
+                            @if ($isPaid)
+                                <a href="{{ url('payment-success/' . $familyId) }}" class="fw-bold text-decoration-none text-dark">
+                                    Siri Keluarga: SSP/{{ $familyId }}
+                                </a>
+                            @else
                             <small class="text-muted">Siri Keluarga : <strong>SSP/{{ $familyId }}</strong></small>
+                            @endif
                         </div>
                         <div class="card-body">
                             @foreach($students as $student)

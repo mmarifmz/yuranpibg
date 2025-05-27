@@ -28,7 +28,13 @@
                 <p><strong>Nama Murid:</strong> {{ $flow->bill_to ?? '-' }}</p>
                 <p><strong>BillCode:</strong> {{ $flow->bill_code ?? '-' }}</p>
                 <p><strong>Jumlah:</strong> RM {{ number_format(($flow->bill_amount ?? 0) / 100, 2) }}</p>
-                <p><strong>Dibatalkan Pada:</strong> {{ $flow->cancelled_at ? \Carbon\Carbon::parse($flow->cancelled_at)->format('d-m-Y') : '-' }}</p>
+                @if ($flow)
+                    <p><strong>Dibatalkan Pada:</strong>
+                        {{ $flow->cancelled_at ? \Carbon\Carbon::parse($flow->cancelled_at)->format('d-m-Y') : '-' }}
+                    </p>
+                @else
+                    <p><strong>Dibatalkan Pada:</strong> -</p>
+                @endif
             </div>
         </div>
     </div>
