@@ -6,6 +6,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentSuccessController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\FamilyController;
+use App\Http\Controllers\PejabatDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,7 @@ Route::get('/download-receipt/{familyId}', [PaymentSuccessController::class, 'do
 | Backoffice Views - Logs and Reports
 |--------------------------------------------------------------------------
 */
-use App\Http\Controllers\PejabatDashboardController;
 
 Route::get('/pejabat/dashboard', [PejabatDashboardController::class, 'index'])->name('pejabat.dashboard');
+Route::get('/pejabat/status', [PejabatDashboardController::class, 'statusPage'])->name('pejabat.status');
+Route::get('/pejabat/status/{className}', [PejabatDashboardController::class, 'showClassStatus'])->name('pejabat.class.status');

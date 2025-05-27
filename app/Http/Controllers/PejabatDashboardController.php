@@ -1,5 +1,7 @@
 <?php
 
+// app/Http/Controllers/PejabatDashboardController.php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -37,5 +39,73 @@ class PejabatDashboardController extends Controller
         'totalCollected',
         'classBreakdown'
     ));
+    }
+
+    // Show class list
+    public function statusPage()
+    {
+        $classes = \App\Models\Family::select('class_name')
+            ->where('family_id', '!=', 'F999')
+            ->distinct()
+            ->orderBy('class_name')
+            ->pluck('class_name');
+
+        $greenCount = 0;
+        $yellowCount = 0;
+        $redCount = 0;
+
+        $classStats = $classes->mapWithKeys(function ($class) use (&$greenCount, &$yellowCount, &$redCount) {
+            $students = \App\Models\Family::where('class_name', $class)
+                ->where('family_id', '!=', 'F999')
+                ->get();
+
+            $total = $students->count();
+            $paid = $students->where('payment_status', 'paid')->count();
+            $percent = $total > 0 ? round(($paid / $total) * 100) : 0;
+
+            if ($percent >= 80) {
+                $greenCount++;
+            } elseif ($percent >= 50) {
+                $yellowCount++;
+            } else {
+                $redCount++;
+            }
+
+            return [$class => [
+                'percent' => $percent,
+                'paid' => $paid,
+                'total' => $total,
+            ]];
+        });
+
+        return view('pejabat.status', [
+            'classes' => $classes,
+            'classStats' => $classStats,
+            'greenCount' => $greenCount,
+            'yellowCount' => $yellowCount,
+            'redCount' => $redCount,
+        ]);
+
+        return view('pejabat.status', [
+            'classes' => $classes,
+            'classStats' => $classStats,
+        ]);
+    }
+
+    // Show student payment status for a specific class
+    public function showClassStatus($className)
+    {
+        $students = \App\Models\Family::where('class_name', $className)
+        ->where('family_id', '!=', 'F999')  // 👈 Exclude F999
+        ->get();
+
+        $paid = $students->where('payment_status', 'paid')->sortBy('student_name');
+        $pending = $students->where('payment_status', 'pending')->sortBy('student_name');
+
+        return view('pejabat.status_single', [
+            'class_name' => $className,
+            'paid' => $paid,
+            'pending' => $pending,
+        ]);
     }
 }

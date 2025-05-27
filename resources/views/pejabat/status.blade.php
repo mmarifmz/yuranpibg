@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Status Pembayaran PIBG</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h2 class="mb-4">Status Pembayaran PIBG Mengikut Kelas</h2>
+        <small>
+            <div class="mb-3 d-flex flex-wrap gap-2">
+                <span class="badge bg-success">
+                    ✅ {{ $greenCount }} kelas (80% – 100% Bayar)
+                </span>
+                <span class="badge bg-warning text-dark">
+                    ⚠️ {{ $yellowCount }} kelas (50% – 79% Bayar)
+                </span>
+                <span class="badge bg-danger">
+                    ❌ {{ $redCount }} kelas (Bawah 50% Bayar)
+                </span>
+            </div>
+        </small>
+
+        <ul class="list-group">
+            @foreach ($classes as $class)
+                @php
+                    $data = $classStats[$class];
+                    $percent = $data['percent'];
+                    $paid = $data['paid'];
+                    $total = $data['total'];
+
+                    if ($percent >= 80) {
+                        $color = 'bg-success';
+                    } elseif ($percent >= 50) {
+                        $color = 'bg-warning';
+                    } else {
+                        $color = 'bg-danger';
+                    }
+                @endphp
+
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>{{ $class }}</strong>
+                        <a href="{{ route('pejabat.class.status', ['className' => $class]) }}" class="btn btn-sm btn-primary">Lihat Senarai</a>
+                    </div>
+
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {{ $color }}"
+                             role="progressbar"
+                             style="width: {{ $percent }}%;"
+                             aria-valuenow="{{ $percent }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100"
+                             data-bs-toggle="tooltip"
+                             data-bs-placement="top"
+                             title="{{ $paid }} / {{ $total }} pelajar dah bayar">
+                            {{ $percent }}%
+                        </div>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+
+        <div id="result" class="mt-5" style="display: none;">
+            <h4 id="classTitle"></h4>
+
+            <div class="mt-3">
+                <h5>✅ Dah Bayar</h5>
+                <ul id="paidList" class="list-group"></ul>
+            </div>
+
+            <div class="mt-3">
+                <h5>❌ Belum Bayar</h5>
+                <ul id="pendingList" class="list-group"></ul>
+            </div>
+
+            <p class="mt-4">
+                <strong>Sila buat bayaran di:</strong><br>
+                <a href="https://yuranpibg.sripetaling.edu.my/" target="_blank">
+                    https://yuranpibg.sripetaling.edu.my/
+                </a>
+            </p>
+
+            <button id="whatsappBtn" class="btn btn-success mt-3">Hantar ke WhatsApp</button>
+        </div>
+    </div>
+
+    <script>
+    function fetchStatus(className) {
+        fetch(`/pejabat/status/${encodeURIComponent(className)}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('classTitle').innerText = 'Kelas: ' + data.class_name;
+
+                const paidList = document.getElementById('paidList');
+                const pendingList = document.getElementById('pendingList');
+
+                paidList.innerHTML = '';
+                pendingList.innerHTML = '';
+
+                let paidText = '';
+                let pendingText = '';
+
+                data.paid.forEach(name => {
+                    let li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = name;
+                    paidList.appendChild(li);
+                    paidText += `- ${name}\n`;
+                });
+
+                data.pending.forEach(name => {
+                    let li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = name;
+                    pendingList.appendChild(li);
+                    pendingText += `- ${name}\n`;
+                });
+
+                const message = 
+                    `📄 *Status Pembayaran PIBG*
+                    *Kelas: ${className}*
+
+                    🟢 *Dah Bayar:*
+                    ${paidList.map(n => '• ' + n).join('\n') || '• Tiada'}
+
+                    🔴 *Belum Bayar:*
+                    ${pendingList.map(n => '• ' + n).join('\n') || '• Tiada'}
+
+                    Sila buat bayaran di:
+                    https://yuranpibg.sripetaling.edu.my/`;
+
+                document.getElementById('whatsappBtn').onclick = () => {
+                    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    window.open(url, '_blank');
+                };
+            });
+    }
+    </script>
+</body>
+</html>
