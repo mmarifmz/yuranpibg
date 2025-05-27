@@ -74,6 +74,11 @@
         <h3 class="text-center mb-4">📚 Status Mengikut Kelas</h3>
         <canvas id="kelasChart"></canvas>
     </div>
+
+    <div class="bg-light p-4 rounded shadow mt-5">
+        <h3 class="text-center mb-4">📈 Jumlah Bayaran Mengikut Tarikh</h3>
+        <canvas id="bayaranChart"></canvas>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -100,6 +105,49 @@
             responsive: true,
             scales: {
                 y: { beginAtZero: true }
+            }
+        }
+    });
+
+    const bayarCtx = document.getElementById('bayaranChart').getContext('2d');
+    const bayaranChart = new Chart(bayarCtx, {
+        type: 'bar',
+        data: {
+            labels: @json($chartDates),
+            datasets: [{
+                label: 'Jumlah Bayaran (RM)',
+                data: @json($chartAmounts),
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            const value = context.dataset.data[index];
+                            const families = @json($chartFamilies)[index];
+                            return `RM ${value} (${families} keluarga)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Jumlah Bayaran (RM)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Tarikh Pembayaran'
+                    }
+                }
             }
         }
     });

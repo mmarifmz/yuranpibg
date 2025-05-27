@@ -23,13 +23,38 @@ class PejabatDashboardController extends Controller
         $targetAmount = $familyCount * 100;
 
         $classBreakdown = Family::where('family_id', '!=', 'F999')
-        ->selectRaw('class_name, COUNT(DISTINCT family_id) as total')
-        ->selectRaw("COUNT(DISTINCT IF(payment_status = 'paid', family_id, NULL)) as paid")
-        ->selectRaw("COUNT(DISTINCT IF(payment_status = 'pending', family_id, NULL)) as pending")
-        ->groupBy('class_name')
-        ->orderByRaw("CAST(SUBSTRING_INDEX(class_name, ' ', 1) AS UNSIGNED) DESC")
-        ->orderBy('class_name')
-        ->get();
+            ->selectRaw('class_name, COUNT(DISTINCT family_id) as total')
+            ->selectRaw("COUNT(DISTINCT IF(payment_status = 'paid', family_id, NULL)) as paid")
+            ->selectRaw("COUNT(DISTINCT IF(payment_status = 'pending', family_id, NULL)) as pending")
+            ->groupBy('class_name')
+            ->orderByRaw("CAST(SUBSTRING_INDEX(class_name, ' ', 1) AS UNSIGNED) DESC")
+            ->orderBy('class_name')
+            ->get();
+
+        $dailyCollections = \DB::table('families as f')
+            ->joinSub(
+                \DB::table('families')
+                    ->selectRaw('MAX(id) as id')
+                    ->whereNotNull('paid_at')
+                    ->where('payment_status', 'paid')
+                    ->groupByRaw('family_id, DATE(paid_at)'),
+                'latest',
+                function ($join) {
+                    $join->on('f.id', '=', 'latest.id');
+                }
+            )
+            ->selectRaw('DATE(f.paid_at) as date, SUM(f.amount_paid) as total, COUNT(f.family_id) as families')
+            ->groupByRaw('DATE(f.paid_at)')
+            ->orderByRaw('DATE(f.paid_at)')
+            ->get();
+
+        $chartDates = $dailyCollections->map(function ($row) {
+            $dayName = \Carbon\Carbon::parse($row->date)->locale('ms')->isoFormat('dddd'); // e.g., "Isnin"
+            return $row->date . ' (' . ucfirst($dayName) . ')';
+        });
+        $chartDates = $chartDates->values();
+        $chartAmounts = $dailyCollections->pluck('total');
+        $chartFamilies = $dailyCollections->pluck('families');
 
     return view('pejabat.dashboard', compact(
         'familyCount',
@@ -37,7 +62,10 @@ class PejabatDashboardController extends Controller
         'pendingCount',
         'targetAmount',
         'totalCollected',
-        'classBreakdown'
+        'classBreakdown',
+        'chartDates',
+        'chartAmounts',
+        'chartFamilies'
     ));
     }
 
