@@ -72,8 +72,12 @@ class PejabatDashboardController extends Controller
             ->get();
 
         $chartDates = $dailyCollections->map(function ($row) {
-            $dayName = \Carbon\Carbon::parse($row->date)->locale('ms')->isoFormat('dddd'); // e.g., "Isnin"
-            return $row->date . ' (' . ucfirst($dayName) . ')';
+            $localDate = \Carbon\Carbon::parse($row->date)
+                ->timezone('Asia/Kuala_Lumpur'); // convert from UTC to GMT+8
+
+            $dayName = $localDate->locale('ms')->isoFormat('dddd'); // e.g., "Isnin"
+
+            return $localDate->toDateString() . ' (' . ucfirst($dayName) . ')';
         });
         $chartDates = $chartDates->values();
         $chartAmounts = $dailyCollections->pluck('total');
