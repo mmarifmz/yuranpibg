@@ -17,9 +17,6 @@
         <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="/">Yuran Portal</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link" href="/pejabat/dashboard">Dashboard</a>
                 </li>
                 <li class="nav-item">
@@ -60,6 +57,11 @@
             <div class="col-md-4">
                 <div class="bg-white p-3 rounded shadow-sm">
                     <x-summary-box :title="'💰 Jumlah Terkumpul'" :value="'RM ' . number_format($totalCollected, 2)" color="yellow" />
+                    <div class="text-sm text-center text-muted mt-2">
+                        Yuran PIBG: RM {{ number_format($yuranTotal, 2) }}<br>
+                        Sumbangan: RM {{ number_format($sumbanganTotal, 2) }}
+                        <span class="text-xs">({{ $sumbanganFamilyCount }} keluarga)</span>
+                    </div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -80,6 +82,11 @@
         <canvas id="bayaranChart"></canvas>
     </div>
 </div>
+
+<footer style="text-align: center; font-size: 12px; color: #888; margin-top: 40px;">
+    Sistem direka oleh <strong>Biro ICT, PIBG Sekolah Kebangsaan Sri Petaling</strong> 2025/2026 | Pembangun Sistem 
+    <strong><a href="https://arif.my" target="_blank" style="color: #888; text-decoration: none;">Arif + Co.</a></strong>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -153,3 +160,4 @@
     });
 </script>
 @endsection
+

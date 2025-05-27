@@ -22,6 +22,29 @@ class PejabatDashboardController extends Controller
         $totalCollected = $families->sum('amount_paid');
         $targetAmount = $familyCount * 100;
 
+        $latestPayments = \DB::table('families')
+            ->selectRaw('MAX(id) as id')
+            ->where('payment_status', 'paid')
+            ->groupBy('family_id');
+
+        $latestFamilyPayments = \DB::table('families as f')
+            ->joinSub($latestPayments, 'latest', fn($join) =>
+                $join->on('f.id', '=', 'latest.id')
+            )
+            ->get();
+        $yuranTotal = $latestFamilyPayments->sum(function ($f) {
+            return min($f->amount_paid, 100);
+        });
+
+        $sumbanganTotal = $latestFamilyPayments->sum(function ($f) {
+            return max($f->amount_paid - 100, 0);
+        });
+
+        $sumbanganFamilyCount = \App\Models\Family::where('payment_status', 'paid')
+            ->where('amount_paid', '>', 100)
+            ->distinct('family_id')
+            ->count('family_id');
+
         $classBreakdown = Family::where('family_id', '!=', 'F999')
             ->selectRaw('class_name, COUNT(DISTINCT family_id) as total')
             ->selectRaw("COUNT(DISTINCT IF(payment_status = 'paid', family_id, NULL)) as paid")
@@ -65,7 +88,10 @@ class PejabatDashboardController extends Controller
         'classBreakdown',
         'chartDates',
         'chartAmounts',
-        'chartFamilies'
+        'chartFamilies',
+        'yuranTotal',
+        'sumbanganTotal',
+        'sumbanganFamilyCount'
     ));
     }
 
