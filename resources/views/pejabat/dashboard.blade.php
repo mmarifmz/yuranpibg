@@ -81,6 +81,21 @@
         <h3 class="text-center mb-4">📈 Jumlah Bayaran Mengikut Tarikh</h3>
         <canvas id="bayaranChart"></canvas>
     </div>
+
+    <div class="bg-light p-4 rounded shadow mt-5">
+        <h3 class="mb-4">🏅 Top 10 Kelas Tahap 1 (Tahun 1–3)</h3>
+        <canvas id="topTahap1Chart"></canvas>
+    </div>
+
+    <div class="bg-light p-4 rounded shadow mt-5">
+        <h3 class="mb-4">🏅 Top 10 Kelas Tahap 2 (Tahun 4–6)</h3>
+        <canvas id="topTahap2Chart"></canvas>
+    </div>
+
+    <div class="bg-light p-4 rounded shadow mt-5">
+    <h3 class="mb-4">💧 Yuran + Sumbangan per Kelas</h3>
+    <canvas id="kelasWaterfallChart" height="300"></canvas>
+</div>
 </div>
 
 <footer style="text-align: center; font-size: 12px; color: #888; margin-top: 40px;">
@@ -158,6 +173,144 @@
             }
         }
     });
+
+    new Chart(document.getElementById('topTahap1Chart'), {
+        type: 'bar',
+        data: {
+            labels: @json($tahap1Labels),
+            datasets: [
+                {
+                    label: 'Bil. Bayar',
+                    data: @json($tahap1Counts),
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)', // green
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'Jumlah Kutipan (RM)',
+                    data: @json($tahap1Amounts),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)', // blue
+                    yAxisID: 'y1',
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Bilangan'
+                    }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Jumlah Kutipan (RM)'
+                    }
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('topTahap2Chart'), {
+        type: 'bar',
+        data: {
+            labels: @json($tahap2Labels),
+            datasets: [
+                {
+                    label: 'Bil. Bayar',
+                    data: @json($tahap2Counts),
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)', // green
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'Jumlah Kutipan (RM)',
+                    data: @json($tahap2Amounts),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)', // blue
+                    yAxisID: 'y1',
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Bilangan'
+                    }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Jumlah Kutipan (RM)'
+                    }
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('kelasWaterfallChart'), {
+        type: 'bar',
+        data: {
+            labels: @json($kelasLabels),
+            datasets: [
+                {
+                    label: 'Yuran (RM100/keluarga)',
+                    data: @json($kelasYuran),
+                    backgroundColor: 'rgba(34, 197, 94, 0.7)', // green
+                    stack: 'total'
+                },
+                {
+                    label: 'Sumbangan Ikhlas',
+                    data: @json($kelasSumbangan),
+                    backgroundColor: 'rgba(255, 206, 86, 0.7)', // yellow
+                    stack: 'total'
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': RM ' + ctx.formattedValue;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Jumlah Kutipan (RM)'
+                    }
+                },
+                y: {
+                    stacked: true
+                }
+            }
+        }
+    });
 </script>
 @endsection
-

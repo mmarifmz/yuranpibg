@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Models\Family;
 
 class PejabatDashboardController extends Controller
@@ -83,6 +84,45 @@ class PejabatDashboardController extends Controller
         $chartAmounts = $dailyCollections->pluck('total');
         $chartFamilies = $dailyCollections->pluck('families');
 
+
+        $kelasData = \App\Models\Family::selectRaw('class_name, COUNT(DISTINCT family_id) as paid_count, SUM(amount_paid) as total_paid')
+            ->where('payment_status', 'paid')
+            ->groupBy('class_name')
+            ->get();
+
+        // split to tahap 1 and 2
+        $tahap1 = $kelasData->filter(fn($row) => Str::startsWith($row->class_name, ['1','2','3']))
+            ->sortByDesc('paid_count')->take(10);
+
+        $tahap2 = $kelasData->filter(fn($row) => Str::startsWith($row->class_name, ['4','5','6']))
+            ->sortByDesc('paid_count')->take(10);
+
+        // for charts
+        $tahap1Labels = $tahap1->pluck('class_name');
+        $tahap1Counts = $tahap1->pluck('paid_count');
+        $tahap1Amounts = $tahap1->pluck('total_paid');
+
+        $tahap2Labels = $tahap2->pluck('class_name');
+        $tahap2Counts = $tahap2->pluck('paid_count');
+        $tahap2Amounts = $tahap2->pluck('total_paid');
+
+        $kelasData = \App\Models\Family::selectRaw("
+                class_name,
+                COUNT(DISTINCT family_id) as paid_count,
+                SUM(LEAST(amount_paid, 100)) as total_yuran,
+                SUM(GREATEST(amount_paid - 100, 0)) as total_sumbangan
+            ")
+            ->where('payment_status', 'paid')
+            ->groupBy('class_name')
+            ->get();
+
+        // Sort by paid count (descending)
+        $kelasSorted = $kelasData->sortByDesc('paid_count');
+
+        $kelasLabels = $kelasSorted->pluck('class_name');
+        $kelasYuran = $kelasSorted->pluck('total_yuran');
+        $kelasSumbangan = $kelasSorted->pluck('total_sumbangan');
+
     return view('pejabat.dashboard', compact(
         'familyCount',
         'paidCount',
@@ -95,7 +135,10 @@ class PejabatDashboardController extends Controller
         'chartFamilies',
         'yuranTotal',
         'sumbanganTotal',
-        'sumbanganFamilyCount'
+        'sumbanganFamilyCount',
+        'tahap1Labels', 'tahap1Counts', 'tahap1Amounts',
+        'tahap2Labels', 'tahap2Counts', 'tahap2Amounts',
+        'kelasLabels', 'kelasYuran', 'kelasSumbangan'
     ));
     }
 
